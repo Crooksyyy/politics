@@ -18,11 +18,9 @@ bibliography: references.bib
 #| warning: false
 #| message: false
 
-library(tidyverse)
-library(palmerpenguins)
 library(boot)
+library(broom.mixed)
 library(collapse)
-library(dataverse)
 library(gutenbergr)
 library(janitor)
 library(knitr)
@@ -31,12 +29,13 @@ library(modelsummary)
 library(rstanarm)
 library(tidybayes)
 library(tidyverse)
+library(palmerpenguins)
 ```
 
 
 # Introduction
 
-You can and should cross-reference sections and sub-sections. 
+You can and should cross-reference sections and sub-sections. We use @citeR and @rohan.
 
 The remainder of this paper is structured as follows. @sec-data....
 
@@ -64,22 +63,6 @@ Talk more about it.
 
 And also planes (@fig-planes). (You can change the height and width, but don't worry about doing that until you have finished every other aspect of the paper - Quarto will try to make it look nice and the defaults usually work well once you have enough text.)
 
-```{r}
-#| label: fig-planes
-#| fig-cap: Relationship between wing length and width
-#| echo: false
-#| warning: false
-#| message: false
-
-analysis_data <- read_csv(here::here("outputs/data/analysis_data.csv"))
-
-analysis_data |> 
-  ggplot(aes(x = width, y = length)) +
-  geom_point(alpha = 0.8) +
-  theme_minimal() +
-  labs(x = "Wing width (mm)",
-       y = "Wing length (mm)")
-```
 
 Talk way more about it. 
 
@@ -96,12 +79,11 @@ Here we briefly describe the Bayesian analysis model used to investigate... Back
 Define $y_i$ as the number of seconds that the plane remained aloft. Then $\beta_i$ is the wing width and $\gamma_i$ is the wing length, both measured in millimeters.  
 
 \begin{align} 
-y_i|\pi_i, \sigma &\sim \mbox{Bern}(\pi_i) \\
-\logit(\pi_i) &= \alpha + \beta_1\times\mbox{gender}_i + \gamma_i + \beta_2\times\mbox{education}_i\\
+y_i|\pi_i &\sim \mbox{Bern}(\pi_i) \\
+\mbox{logit}(\pi_i) &= \alpha + \beta_1 \times \mbox{gender}_i + \beta_2 \times \mbox{education}_i\\
 \alpha &\sim \mbox{Normal}(0, 2.5) \\
-\beta &\sim \mbox{Normal}(0, 2.5) \\
-\gamma &\sim \mbox{Normal}(0, 2.5) \\
-\sigma &\sim \mbox{Exponential}(1)
+\beta_1 &\sim \mbox{Normal}(0, 5.02) \\
+\beta_2 &\sim \mbox{Normal}(0, 6.34)
 \end{align}
 
 We run the model in R [@citeR] using the `rstanarm` package of @rstanarm. We use the default priors from `rstanarm`.
@@ -125,6 +107,7 @@ Our results are summarized in @tbl-modelresults.
 #| message: false
 
 library(rstanarm)
+library(here)
 
 first_model <-
   readRDS(file = here::here("outputs/models/first_model.rds"))
@@ -146,6 +129,16 @@ modelsummary::modelsummary(
 )
 ```
 
+```{r}
+#| echo: false
+#| eval: true
+#| label: fig-modelresultsfig
+#| fig-cap: "Explanatory models of flight time based on wing width and wing length"
+#| warning: false
+
+modelplot(first_model, conf_level = 0.9) +
+  labs(x = "90 per cent credibility interval")
+```
 
 
 
@@ -180,8 +173,8 @@ In @fig-ppcheckandposteriorvsprior-1 we implement a posterior predictive check. 
 
 In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. This shows... 
 
-```{r}
-#| eval: true
+```{r} 
+#| eval: false
 #| echo: false
 #| message: false
 #| warning: false
@@ -189,6 +182,18 @@ In @fig-ppcheckandposteriorvsprior-2 we compare the posterior with the prior. Th
 #| layout-ncol: 2
 #| fig-cap: "Examining how the model fits, and is affected by, the data"
 #| fig-subcap: ["Posterior prediction check", "Comparing the posterior with the prior"]
+
+analysis_data <- arrow::read_parquet(here::here("outputs/data/analysis_data.parquet"))
+
+
+set.seed(853)
+
+analysis_data <- 
+  analysis_data |> 
+  slice_sample(n = 1000)
+
+
+
 
 pp_check(first_model) +
   theme_classic() +
@@ -224,9 +229,9 @@ plot(first_model, "rhat")
 
 
 
+
+
 \newpage
 
 
 # References
-
-
